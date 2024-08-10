@@ -29,7 +29,7 @@ def on_message(client, userdata, msg):
     if msg.topic in LIGHT_TOPIC_COMMANDS:
         light_commands = {
             "1": LIGHT_TOPIC_COMMANDS.get(msg.topic, []),
-            "0": LIGHT_TOPIC_COMMANDS.get(msg.topic, [])[0] + [2] + LIGHT_TOPIC_COMMANDS.get(msg.topic, [])[2]
+            "0": [LIGHT_TOPIC_COMMANDS.get(msg.topic, [])[0] , 2, LIGHT_TOPIC_COMMANDS.get(msg.topic, [])[2]]
         }
         command = light_commands.get(msg.payload.decode())
         if command:
@@ -48,39 +48,41 @@ def on_message(client, userdata, msg):
 
 def set_mode(client, mode):
     print(f"Setting mode to {mode}")
-    if mode == "heating":
+    command = None
+    if mode == "heat":
         command = [125, 7, 2]
-    elif mode == "cooling":
+    elif mode == "cool":
         command = [125, 7, 1]
-    elif mode == "auto":
-        # TODO
+    # elif mode == "auto":
+    #     # TODO
     elif mode == "off":
         command = [125, 7, 0]
     
     if command:
         send_can_message(command)
-    client.publish(MODE_STATE_TOPIC, mode)
+    # client.publish(MODE_STATE_TOPIC, mode)
 
 def set_fan_mode(client, fan_mode):
     print(f"Setting fan mode to {fan_mode}")
-    if fan_mode == "speed 3":
+    command = None
+    if fan_mode == "high":
         command = [125, 6, 3]
-    elif fan_mode == "speed 2":
+    elif fan_mode == "medium":
         command = [125, 6, 2]
-    elif fan_mode == "speed 1":
+    elif fan_mode == "low":
         command = [125, 6, 1]
     elif fan_mode == "off":
         command = [125, 6, 0]
     
     if command:
         send_can_message(command)
-    client.publish(FAN_STATE_TOPIC, fan_mode)
+    # client.publish(FAN_STATE_TOPIC, fan_mode)
 
 def set_temperature(client, temp):
     print(f"Setting temperature to {temp}")
     command = [125, 3, temp*2]
     send_can_message(command)
-    client.publish(TEMP_STATE_TOPIC, temp)
+    # client.publish(TEMP_STATE_TOPIC, temp)
 
 def send_can_message(command):
     try:
@@ -118,8 +120,8 @@ def publish_light_status(client):
                             SWITCH4_TOPIC_PUBLISH: "1" if light_byte & 8 else "0"
                         }
 
-                    for topic, status in light_statuses.items():
-                        client.publish(topic, status)
+                        for topic, status in light_statuses.items():
+                            client.publish(topic, status)
 
                     if updated_received_data[:2] == [64, 125] and updated_received_data[4] == 37:
                         publish_hvac_state(client, updated_received_data)
@@ -139,18 +141,18 @@ def publish_hvac_state(client, updated_received_data):
         if hvac_bytes & 3 == 0:
             fan_mode = "off"
         elif hvac_bytes & 3 == 1:
-            fan_mode = "speed 1"
+            fan_mode = "low"
         elif hvac_bytes & 3 == 2:
-            fan_mode = "speed 2"
+            fan_mode = "medium"
         elif hvac_bytes & 3 == 3:
-            fan_mode = "speed 3"
-        if hvac_bytes & 12 == 0:
+            fan_mode = "high"
+        if (hvac_bytes & 12) >> 2 == 0:
             mode = "off"
-        elif hvac_bytes & 12 == 1:
-            mode = "cooling"
-        elif hvac_bytes & 12 == 2:
-            mode = "heating"
-        if hvac_bytes & 48 == 2:
+        elif (hvac_bytes & 12) >> 2 == 1:
+            mode = "cool"
+        elif (hvac_bytes & 12) >> 2 == 2:
+            mode = "heat"
+        if (hvac_bytes & 48) >> 4 == 2:
             mode = "auto"
 
     if updated_received_data[2] == 3:   # register 3
@@ -161,7 +163,7 @@ def publish_hvac_state(client, updated_received_data):
     # Publish the state
     client.publish(MODE_STATE_TOPIC, mode)
     client.publish(FAN_STATE_TOPIC, fan_mode)
-    client.publish(TEMP_STATE_TOPIC, set_temp)
+    client.publish(TEMP_STATE_TOPIC, int(set_temp))
     client.publish(CURRENT_TEMP_TOPIC, current_temp)
 
     
