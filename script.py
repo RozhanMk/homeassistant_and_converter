@@ -10,11 +10,13 @@ SERIAL_PORT = '/dev/ttyS0'
 BAUDRATE = 115200
 
 LIGHT_TOPIC_COMMANDS = {
-    SWITCH1_TOPIC_SUBSCRIBE: [5, 1, 1],
-    SWITCH2_TOPIC_SUBSCRIBE: [5, 1, 2],
-    SWITCH3_TOPIC_SUBSCRIBE: [5, 1, 4],
-    SWITCH4_TOPIC_SUBSCRIBE: [5, 1, 8]
+    SWITCH1_COMMAND_TOPIC: [5, 1, 1],
+    SWITCH2_COMMAND_TOPIC: [5, 1, 2],
+    SWITCH3_COMMAND_TOPIC: [5, 1, 4],
+    SWITCH4_COMMAND_TOPIC: [5, 1, 8]
 }
+ser = serial.Serial(port=SERIAL_PORT, baudrate=BAUDRATE, timeout=1)  # test different timeouts
+
 
 def on_connect(client, userdata, flags, rc):
     print(f"Connected to MQTT broker with result code {rc}")
@@ -34,6 +36,7 @@ def on_message(client, userdata, msg):
         command = light_commands.get(msg.payload.decode())
         if command:
             send_can_message(command)
+            
     elif msg.topic == MODE_COMMAND_TOPIC:
         mode = msg.payload.decode()
         set_mode(client, mode)
@@ -60,7 +63,7 @@ def set_mode(client, mode):
     
     if command:
         send_can_message(command)
-    # client.publish(MODE_STATE_TOPIC, mode)
+    client.publish(MODE_STATE_TOPIC, mode)
 
 def set_fan_mode(client, fan_mode):
     print(f"Setting fan mode to {fan_mode}")
@@ -76,68 +79,51 @@ def set_fan_mode(client, fan_mode):
     
     if command:
         send_can_message(command)
-    # client.publish(FAN_STATE_TOPIC, fan_mode)
+    client.publish(FAN_STATE_TOPIC, fan_mode)
 
 def set_temperature(client, temp):
     print(f"Setting temperature to {temp}")
     command = [125, 3, temp*2]
     send_can_message(command)
-    # client.publish(TEMP_STATE_TOPIC, temp)
+    client.publish(TEMP_STATE_TOPIC, temp)
 
 def send_can_message(command):
+    ser.write(command)
+    time.sleep(0.2) # wait a bit to complete sending the command
+
+def publish_status(client):
     try:
-        with serial.Serial(SERIAL_PORT, BAUDRATE) as ser:
-            print(f"Connected to {SERIAL_PORT} at {BAUDRATE} baud to write.")
-            ser.write(command)
-    except serial.SerialException as e:
-        print(f"Error: {e}")
-    finally:
-        print("Serial writing port closed.")
+        while True:
+            if ser.in_waiting >= 5:
+                line = ser.read(5)
+                received_data = [int(x) for x in line]
+            
+                print(', '.join(map(str, received_data)))
+                if received_data[:3] == [64, 5, 0] and received_data[4] == 37:  # 4 switch lights
+                    light_byte = received_data[3]
+                    light_statuses = {
+                        SWITCH1_STATE_TOPIC: "1" if light_byte & 1 else "0",
+                        SWITCH2_STATE_TOPIC: "1" if light_byte & 2 else "0",
+                        SWITCH3_STATE_TOPIC: "1" if light_byte & 4 else "0",
+                        SWITCH4_STATE_TOPIC: "1" if light_byte & 8 else "0"
+                    }
+                    for topic, status in light_statuses.items():
+                        client.publish(topic, status)
+                elif received_data[:2] == [64, 125] and received_data[4] == 37:
+                    publish_hvac_state(client, received_data)
+            time.sleep(0.1)
 
-def publish_light_status(client):
-    try:
-        with serial.Serial(SERIAL_PORT, BAUDRATE) as ser:
-            print(f"Connected to {SERIAL_PORT} at {BAUDRATE} baud to read.")
-            updated_received_data = []
-            counter = 0
-
-            while True:
-                if ser.in_waiting > 0:
-                    line = int(ser.read(1)[0])
-                    updated_received_data.append(line)
-                    counter += 1
-
-                if counter == 5:
-                    counter = 0
-                    # debug
-                    print(', '.join(map(str, updated_received_data)))
-                    if updated_received_data[:3] == [64, 5, 0] and updated_received_data[4] == 37:  # 4 switch lights
-                        light_byte = updated_received_data[3]
-                        light_statuses = {
-                            SWITCH1_TOPIC_PUBLISH: "1" if light_byte & 1 else "0",
-                            SWITCH2_TOPIC_PUBLISH: "1" if light_byte & 2 else "0",
-                            SWITCH3_TOPIC_PUBLISH: "1" if light_byte & 4 else "0",
-                            SWITCH4_TOPIC_PUBLISH: "1" if light_byte & 8 else "0"
-                        }
-
-                        for topic, status in light_statuses.items():
-                            client.publish(topic, status)
-
-                    if updated_received_data[:2] == [64, 125] and updated_received_data[4] == 37:
-                        publish_hvac_state(client, updated_received_data)
-
-                    updated_received_data.clear()
-                time.sleep(1) 
     except serial.SerialException as e:
         print(f"Error: {e}")
     except KeyboardInterrupt:
         print("Stopping serial read.")
     finally:
         print("Serial reading port closed.")
+        ser.close()
 
-def publish_hvac_state(client, updated_received_data):
-    hvac_bytes = updated_received_data[3]
-    if updated_received_data[2] == 0:   # register 0
+def publish_hvac_state(client, received_data):
+    hvac_bytes = received_data[3]
+    if received_data[2] == 0:   # register 0
         if hvac_bytes & 3 == 0:
             fan_mode = "off"
         elif hvac_bytes & 3 == 1:
@@ -154,19 +140,16 @@ def publish_hvac_state(client, updated_received_data):
             mode = "heat"
         if (hvac_bytes & 48) >> 4 == 2:
             mode = "auto"
+        client.publish(MODE_STATE_TOPIC, mode)
+        client.publish(FAN_STATE_TOPIC, fan_mode)
 
-    if updated_received_data[2] == 3:   # register 3
+    if received_data[2] == 3:   # register 3
         set_temp = hvac_bytes / 2
-    if updated_received_data[2] == 2:   # register 2
+        client.publish(TEMP_STATE_TOPIC, int(set_temp))
+    if received_data[2] == 2:   # register 2
         current_temp = hvac_bytes
+        client.publish(CURRENT_TEMP_TOPIC, current_temp)
 
-    # Publish the state
-    client.publish(MODE_STATE_TOPIC, mode)
-    client.publish(FAN_STATE_TOPIC, fan_mode)
-    client.publish(TEMP_STATE_TOPIC, int(set_temp))
-    client.publish(CURRENT_TEMP_TOPIC, current_temp)
-
-    
 
 client = mqtt.Client()
 client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
@@ -174,6 +157,10 @@ client.on_connect = on_connect
 client.on_message = on_message
 
 client.connect(MQTT_BROKER, MQTT_PORT, 60)
-client.loop_start()
+client.loop_start() #start the MQTT client in a separate thread
 
-publish_light_status(client)
+try:
+    publish_status(client)
+finally:
+    client.loop_stop()
+    client.disconnect()
