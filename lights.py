@@ -34,8 +34,13 @@ def on_message(client, userdata, msg):
         send_can_message(command)
 
 def send_can_message(command):
-    ser.write(command)
-    time.sleep(0.2) # wait a bit to complete sending the command
+    try:
+        ser.write(command)
+        ser.flush()  # Ensure all data is transmitted
+        print(f"command written: {command} ")
+        time.sleep(0.2) # wait a bit to complete sending the command
+    except serial.SerialException as e:
+        print(f"Error sending command: {e}")
     
 def publish_light_status(client):
     try:
@@ -56,8 +61,7 @@ def publish_light_status(client):
 
                     for topic, status in light_statuses.items():
                         client.publish(topic, status)
-            time.sleep(0.1)
-
+        
     except serial.SerialException as e:
         print(f"Error: {e}")
     except KeyboardInterrupt:

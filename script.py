@@ -15,6 +15,8 @@ LIGHT_TOPIC_COMMANDS = {
     SWITCH3_COMMAND_TOPIC: [5, 1, 4],
     SWITCH4_COMMAND_TOPIC: [5, 1, 8]
 }
+
+general_mode = 4
 ser = serial.Serial(port=SERIAL_PORT, baudrate=BAUDRATE, timeout=1)  # test different timeouts
 
 
@@ -56,8 +58,9 @@ def set_mode(client, mode):
         command = [125, 7, 2]
     elif mode == "cool":
         command = [125, 7, 1]
-    # elif mode == "auto":
-    #     # TODO
+    elif mode == "auto":
+        print(f"general mode = {general_mode}")
+        command = [125, 0, general_mode + 32]
     elif mode == "off":
         command = [125, 7, 0]
     
@@ -89,6 +92,7 @@ def set_temperature(client, temp):
 
 def send_can_message(command):
     ser.write(command)
+    ser.flush()
     time.sleep(0.2) # wait a bit to complete sending the command
 
 def publish_status(client):
@@ -111,7 +115,6 @@ def publish_status(client):
                         client.publish(topic, status)
                 elif received_data[:2] == [64, 125] and received_data[4] == 37:
                     publish_hvac_state(client, received_data)
-            time.sleep(0.1)
 
     except serial.SerialException as e:
         print(f"Error: {e}")
@@ -140,6 +143,8 @@ def publish_hvac_state(client, received_data):
             mode = "heat"
         if (hvac_bytes & 48) >> 4 == 2:
             mode = "auto"
+        global general_mode
+        general_mode = (hvac_bytes & 12)
         client.publish(MODE_STATE_TOPIC, mode)
         client.publish(FAN_STATE_TOPIC, fan_mode)
 
