@@ -1,0 +1,61 @@
+switch:
+    - name: "Light 1 Switch"
+      state_topic: "home/switch1/status"
+      command_topic: "home/switch1/control"
+      payload_on: "1"
+      payload_off: "0"
+      optimistic: false
+      qos: 0
+      retain: false
+
+    - name: "Light 2 Switch"
+      state_topic: "home/switch2/status"
+      command_topic: "home/switch2/control"
+      payload_on: "1"
+      payload_off: "0"
+      optimistic: false
+      qos: 0
+      retain: false
+    
+    - name: "Light 3 Switch"
+      state_topic: "home/switch3/status"
+      command_topic: "home/switch3/control"
+      payload_on: "1"
+      payload_off: "0"
+      optimistic: false
+      qos: 0
+      retain: false
+
+    - name: "Light 4 Switch"
+      state_topic: "home/switch4/status"
+      command_topic: "home/switch4/control"
+      payload_on: "1"
+      payload_off: "0"
+      optimistic: false
+      qos: 0
+      retain: false
+    
+climate:
+  - name: "Thermostat"
+    modes:
+      - "cool"
+      - "heat"
+    fan_modes:
+      - "off"
+      - "low"
+      - "medium"
+      - "high"
+      - "auto"
+    mode_command_topic: "home/thermostat/mode/control"
+    mode_state_topic: "home/thermostat/mode/status"
+    fan_mode_command_topic: "home/thermostat/fan/control"
+    fan_mode_state_topic: "home/thermostat/fan/status"
+    temperature_command_topic: "home/thermostat/temperature/control"
+    temperature_state_topic: "home/thermostat/temperature/status"
+    current_temperature_topic: "home/thermostat/temperature/current"
+    min_temp: 16
+    max_temp: 31
+    temp_step: 1.0
+    precision: 1.0
+    retain: false
+    qos: 0
