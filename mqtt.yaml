@@ -1,0 +1,115 @@
+switch:
+    - name: "Stand Light 1"
+      state_topic: "home/stand/switch1/status"
+      command_topic: "home/stand/switch1/control"
+      payload_on: "1"
+      payload_off: "0"
+      optimistic: false
+      qos: 0
+      retain: false
+
+    - name: "Stand Light 2"
+      state_topic: "home/stand/switch2/status"
+      command_topic: "home/stand/switch2/control"
+      payload_on: "1"
+      payload_off: "0"
+      optimistic: false
+      qos: 0
+      retain: false
+    
+    - name: "Stand Light 3"
+      state_topic: "home/stand/switch3/status"
+      command_topic: "home/stand/switch3/control"
+      payload_on: "1"
+      payload_off: "0"
+      optimistic: false
+      qos: 0
+      retain: false
+
+    - name: "Stand Light 4"
+      state_topic: "home/stand/switch4/status"
+      command_topic: "home/stand/switch4/control"
+      payload_on: "1"
+      payload_off: "0"
+      optimistic: false
+      qos: 0
+      retain: false
+
+    - name: "Light 1"
+      state_topic: "home/light1/status"
+      command_topic: "home/light1/control"
+      payload_on: "1"
+      payload_off: "0"
+      optimistic: false
+      qos: 0
+      retain: false
+
+    - name: "Light 2"
+      state_topic: "home/light2/status"
+      command_topic: "home/light2/control"
+      payload_on: "1"
+      payload_off: "0"
+      optimistic: false
+      qos: 0
+      retain: false
+    
+    - name: "Light 3"
+      state_topic: "home/light3/status"
+      command_topic: "home/light3/control"
+      payload_on: "1"
+      payload_off: "0"
+      optimistic: false
+      qos: 0
+      retain: false
+
+    - name: "Light 4"
+      state_topic: "home/light4/status"
+      command_topic: "home/light4/control"
+      payload_on: "1"
+      payload_off: "0"
+      optimistic: false
+      qos: 0
+      retain: false
+
+    - name: "Light 5"
+      state_topic: "home/light5/status"
+      command_topic: "home/light5/control"
+      payload_on: "1"
+      payload_off: "0"
+      optimistic: false
+      qos: 0
+      retain: false
+
+    - name: "Light 6"
+      state_topic: "home/light6/status"
+      command_topic: "home/light6/control"
+      payload_on: "1"
+      payload_off: "0"
+      optimistic: false
+      qos: 0
+      retain: false
+    
+climate:
+  - name: "Thermostat"
+    modes:
+      - "cool"
+      - "heat"
+    fan_modes:
+      - "off"
+      - "low"
+      - "medium"
+      - "high"
+      - "auto"
+    mode_command_topic: "home/thermostat/mode/control"
+    mode_state_topic: "home/thermostat/mode/status"
+    fan_mode_command_topic: "home/thermostat/fan/control"
+    fan_mode_state_topic: "home/thermostat/fan/status"
+    temperature_command_topic: "home/thermostat/temperature/control"
+    temperature_state_topic: "home/thermostat/temperature/status"
+    current_temperature_topic: "home/thermostat/temperature/current"
+    min_temp: 16
+    max_temp: 31
+    temp_step: 1.0
+    precision: 1.0
+    retain: false
+    qos: 0
