@@ -1,6 +1,5 @@
 import paho.mqtt.client as mqtt
 import serial
-import time
 from settings import *
 STAND_LIGHTS_TOPIC_COMMANDS = {
     STAND_LIGHT1_COMMAND_TOPIC: [5, 1, 1],
@@ -46,7 +45,7 @@ def on_message(client, userdata, msg):
     elif msg.topic in LIGHTS_TOPIC_COMMANDS:    # 6 lights
         light_commands = {
             "1": LIGHTS_TOPIC_COMMANDS.get(msg.topic),
-            "0": [LIGHTS_TOPIC_COMMANDS.get(msg.topic)[0] , 2, STAND_LIGHTS_TOPIC_COMMANDS.get(msg.topic)[2]]
+            "0": [LIGHTS_TOPIC_COMMANDS.get(msg.topic)[0] , 2, LIGHTS_TOPIC_COMMANDS.get(msg.topic)[2]]
         }
         command = light_commands.get(msg.payload.decode())
         if command:
@@ -64,7 +63,6 @@ def on_message(client, userdata, msg):
 
 def set_mode(client, mode):
     print(f"Setting mode to {mode}")
-    command = None
     if mode == "heat":
         command = [125, 7, 2]
     elif mode == "cool":
@@ -75,8 +73,6 @@ def set_mode(client, mode):
 
 def set_fan_mode(client, fan_mode):
     print(f"Setting fan mode to {fan_mode}")
-    command = None
-
     if fan_mode == "high":
         if (general_mode & 32) >> 5 == 1:
             command = [125, 0, general_mode - 32 + 3 - (general_mode & 3)]
@@ -162,8 +158,6 @@ def publish_status(client):
 
 def publish_hvac_state(client, received_data):
     hvac_bytes = received_data[3]
-    mode = None
-    fan_mode = None
     if received_data[2] == 0:   # register 0
         if (hvac_bytes & 32) >> 5 == 1:
             fan_mode = "auto"
@@ -195,7 +189,6 @@ def publish_hvac_state(client, received_data):
         client.publish(CURRENT_TEMP_TOPIC, current_temp)
 
 client = mqtt.Client()
-client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
 client.on_connect = on_connect
 client.on_message = on_message
 
